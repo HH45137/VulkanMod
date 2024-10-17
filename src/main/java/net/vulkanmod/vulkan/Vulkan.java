@@ -22,6 +22,7 @@ import java.nio.LongBuffer;
 import java.util.*;
 
 import static java.util.stream.Collectors.toSet;
+import static net.vulkanmod.vulkan.RayTracing.RAY_TRACING;
 import static net.vulkanmod.vulkan.queue.Queue.getQueueFamilies;
 import static net.vulkanmod.vulkan.util.VUtil.asPointerBuffer;
 import static org.lwjgl.glfw.GLFWVulkan.glfwCreateWindowSurface;
@@ -66,6 +67,16 @@ public class Vulkan {
 
         if (DYNAMIC_RENDERING) {
             extensions.add(VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME);
+        }
+
+        if (RAY_TRACING) {
+            extensions.add("VK_KHR_acceleration_structure");
+            extensions.add("VK_KHR_buffer_device_address");
+            extensions.add("VK_KHR_deferred_host_operations");
+            extensions.add("VK_EXT_descriptor_indexing");
+            extensions.add("VK_KHR_spirv_1_4");
+            extensions.add("VK_KHR_shader_float_controls");
+            extensions.add("VK_KHR_ray_query");
         }
 
         return new HashSet<>(extensions);
