@@ -44,8 +44,6 @@ public class VBO {
         this.uploadVertexBuffer(parameters, meshData.vertexBuffer());
         this.uploadIndexBuffer(meshData.indexBuffer());
 
-        RayTracing.setBLAS(meshData, this);
-
         meshData.close();
     }
 
