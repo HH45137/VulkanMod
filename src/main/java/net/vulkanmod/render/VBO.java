@@ -7,6 +7,7 @@ import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.renderer.ShaderInstance;
 import net.vulkanmod.interfaces.ShaderMixed;
+import net.vulkanmod.vulkan.RayTracing;
 import net.vulkanmod.vulkan.Renderer;
 import net.vulkanmod.vulkan.VRenderSystem;
 import net.vulkanmod.vulkan.memory.AutoIndexBuffer;
@@ -42,6 +43,8 @@ public class VBO {
 
         this.uploadVertexBuffer(parameters, meshData.vertexBuffer());
         this.uploadIndexBuffer(meshData.indexBuffer());
+
+        RayTracing.setBLAS(meshData, this);
 
         meshData.close();
     }
@@ -164,6 +167,14 @@ public class VBO {
 
         this.vertexCount = 0;
         this.indexCount = 0;
+    }
+
+    public VertexBuffer getVertexBuffer() {
+        return this.vertexBuffer;
+    }
+
+    public IndexBuffer getIndexBuffer() {
+        return this.indexBuffer;
     }
 
 }

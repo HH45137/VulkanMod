@@ -2,7 +2,9 @@ package net.vulkanmod.vulkan.memory;
 
 import java.nio.ByteBuffer;
 
+import static org.lwjgl.vulkan.KHRAccelerationStructure.VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR;
 import static org.lwjgl.vulkan.VK10.*;
+import static org.lwjgl.vulkan.VK12.VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
 
 public class IndexBuffer extends Buffer {
 
@@ -12,9 +14,24 @@ public class IndexBuffer extends Buffer {
         this(size, type, IndexType.SHORT);
     }
 
+    public IndexBuffer(int size, MemoryType type, boolean rtGeometry) {
+        this(size, type, IndexType.SHORT, rtGeometry);
+    }
+
     public IndexBuffer(int size, MemoryType type, IndexType indexType) {
         super(VK_BUFFER_USAGE_INDEX_BUFFER_BIT, type);
         this.indexType = indexType;
+
+        this.createBuffer(size);
+    }
+
+    public IndexBuffer(int size, MemoryType type, IndexType indexType, boolean rtGeometry) {
+        super(VK_BUFFER_USAGE_INDEX_BUFFER_BIT, type);
+        this.indexType = indexType;
+
+        if (rtGeometry) {
+            this.usage = VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+        }
 
         this.createBuffer(size);
     }

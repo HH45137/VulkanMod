@@ -14,6 +14,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static java.util.stream.Collectors.toSet;
+import static net.vulkanmod.vulkan.RayTracing.RAY_TRACING;
 import static net.vulkanmod.vulkan.queue.Queue.findQueueFamilies;
 import static net.vulkanmod.vulkan.util.VUtil.asPointerBuffer;
 import static org.lwjgl.glfw.GLFWVulkan.glfwGetRequiredInstanceExtensions;
@@ -22,7 +23,8 @@ import static org.lwjgl.system.MemoryStack.stackPush;
 import static org.lwjgl.vulkan.EXTDebugUtils.VK_EXT_DEBUG_UTILS_EXTENSION_NAME;
 import static org.lwjgl.vulkan.KHRSurface.*;
 import static org.lwjgl.vulkan.VK10.*;
-import static org.lwjgl.vulkan.VK12.VK_API_VERSION_1_2;
+import static org.lwjgl.vulkan.VK12.*;
+import static org.lwjgl.vulkan.VK13.*;
 
 public abstract class DeviceManager {
     public static List<Device> availableDevices;
@@ -167,9 +169,9 @@ public abstract class DeviceManager {
                 queueCreateInfo.pQueuePriorities(stack.floats(1.0f));
             }
 
-            VkPhysicalDeviceVulkan11Features deviceVulkan11Features = VkPhysicalDeviceVulkan11Features.calloc(stack);
-            deviceVulkan11Features.sType$Default();
-            deviceVulkan11Features.shaderDrawParameters(device.isDrawIndirectSupported());
+            VkPhysicalDeviceVulkan12Features deviceVulkan12Features = VkPhysicalDeviceVulkan12Features.calloc(stack);
+            deviceVulkan12Features.sType$Default();
+//            deviceVulkan12Features.shaderDrawParameters(device.isDrawIndirectSupported());
 
             VkPhysicalDeviceFeatures2 deviceFeatures = VkPhysicalDeviceFeatures2.calloc(stack);
             deviceFeatures.sType$Default();
@@ -184,19 +186,43 @@ public abstract class DeviceManager {
                 VRenderSystem.canSetLineWidth = true;
             }
 
+            if (RAY_TRACING) {
+                deviceVulkan12Features.descriptorIndexing(true);
+                deviceVulkan12Features.bufferDeviceAddress(true);
+            }
+
             VkDeviceCreateInfo createInfo = VkDeviceCreateInfo.calloc(stack);
             createInfo.sType$Default();
             createInfo.sType(VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO);
             createInfo.pQueueCreateInfos(queueCreateInfos);
             createInfo.pEnabledFeatures(deviceFeatures.features());
-            createInfo.pNext(deviceVulkan11Features);
+//            createInfo.pNext(deviceVulkan12Features);
+
+            if (RAY_TRACING) {
+                VkPhysicalDeviceAccelerationStructureFeaturesKHR accelerationStructureFeatures = VkPhysicalDeviceAccelerationStructureFeaturesKHR
+                        .malloc(stack)
+                        .sType$Default()
+                        .accelerationStructure(true);
+                VkPhysicalDeviceRayQueryFeaturesKHR rayQueryFeatures = VkPhysicalDeviceRayQueryFeaturesKHR
+                        .malloc(stack)
+                        .sType$Default()
+                        .rayQuery(true);
+                VkPhysicalDeviceBufferDeviceAddressFeaturesKHR bufferDeviceAddressFeatures = VkPhysicalDeviceBufferDeviceAddressFeaturesKHR
+                        .malloc(stack)
+                        .sType$Default()
+                        .bufferDeviceAddress(true);
+                createInfo
+                        .pNext(accelerationStructureFeatures)
+                        .pNext(rayQueryFeatures)
+                        .pNext(bufferDeviceAddressFeatures);
+            }
 
             if (Vulkan.DYNAMIC_RENDERING) {
                 VkPhysicalDeviceDynamicRenderingFeaturesKHR dynamicRenderingFeaturesKHR = VkPhysicalDeviceDynamicRenderingFeaturesKHR.calloc(stack);
                 dynamicRenderingFeaturesKHR.sType$Default();
                 dynamicRenderingFeaturesKHR.dynamicRendering(true);
 
-                deviceVulkan11Features.pNext(dynamicRenderingFeaturesKHR.address());
+                deviceVulkan12Features.pNext(dynamicRenderingFeaturesKHR.address());
 
 //                //Vulkan 1.3 dynamic rendering
 //                VkPhysicalDeviceVulkan13Features deviceVulkan13Features = VkPhysicalDeviceVulkan13Features.calloc(stack);
@@ -206,7 +232,7 @@ public abstract class DeviceManager {
 //
 //                deviceVulkan13Features.dynamicRendering(true);
 //                createInfo.pNext(deviceVulkan13Features);
-//                deviceVulkan13Features.pNext(deviceVulkan11Features.address());
+//                deviceVulkan13Features.pNext(deviceVulkan12Features.address());
             }
 
             createInfo.ppEnabledExtensionNames(asPointerBuffer(Vulkan.REQUIRED_EXTENSION));

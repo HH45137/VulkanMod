@@ -107,10 +107,14 @@ public class MemoryManager {
             VkBufferCreateInfo bufferInfo = VkBufferCreateInfo.calloc(stack);
             bufferInfo.sType(VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO);
             bufferInfo.size(size);
+            if (usage == 655491) {
+                usage = 655360;
+            }
             bufferInfo.usage(usage);
 
             VmaAllocationCreateInfo allocationInfo = VmaAllocationCreateInfo.calloc(stack);
             allocationInfo.requiredFlags(properties);
+            allocationInfo.usage(VMA_MEMORY_USAGE_AUTO);
 
             int result = vmaCreateBuffer(ALLOCATOR, bufferInfo, allocationInfo, pBuffer, pBufferMemory, null);
             if (result != VK_SUCCESS) {

@@ -30,17 +30,23 @@ import static org.lwjgl.glfw.GLFWVulkan.glfwGetRequiredInstanceExtensions;
 import static org.lwjgl.system.MemoryStack.stackGet;
 import static org.lwjgl.system.MemoryStack.stackPush;
 import static org.lwjgl.system.MemoryUtil.NULL;
-import static org.lwjgl.util.vma.Vma.vmaCreateAllocator;
-import static org.lwjgl.util.vma.Vma.vmaDestroyAllocator;
+import static org.lwjgl.util.vma.Vma.*;
 import static org.lwjgl.vulkan.EXTDebugUtils.*;
+import static org.lwjgl.vulkan.EXTDescriptorIndexing.VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME;
+import static org.lwjgl.vulkan.KHRAccelerationStructure.VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME;
+import static org.lwjgl.vulkan.KHRBufferDeviceAddress.VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME;
+import static org.lwjgl.vulkan.KHRDeferredHostOperations.VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME;
 import static org.lwjgl.vulkan.KHRDynamicRendering.VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME;
+import static org.lwjgl.vulkan.KHRRayQuery.VK_KHR_RAY_QUERY_EXTENSION_NAME;
+import static org.lwjgl.vulkan.KHRShaderFloatControls.VK_KHR_SHADER_FLOAT_CONTROLS_EXTENSION_NAME;
+import static org.lwjgl.vulkan.KHRSpirv14.VK_KHR_SPIRV_1_4_EXTENSION_NAME;
 import static org.lwjgl.vulkan.KHRSwapchain.VK_KHR_SWAPCHAIN_EXTENSION_NAME;
 import static org.lwjgl.vulkan.VK10.*;
 import static org.lwjgl.vulkan.VK12.VK_API_VERSION_1_2;
 
 public class Vulkan {
 
-    public static final boolean ENABLE_VALIDATION_LAYERS = false;
+    public static final boolean ENABLE_VALIDATION_LAYERS = true;
 //    public static final boolean ENABLE_VALIDATION_LAYERS = true;
 
     //    public static final boolean DYNAMIC_RENDERING = true;
@@ -70,13 +76,13 @@ public class Vulkan {
         }
 
         if (RAY_TRACING) {
-            extensions.add("VK_KHR_acceleration_structure");
-            extensions.add("VK_KHR_buffer_device_address");
-            extensions.add("VK_KHR_deferred_host_operations");
-            extensions.add("VK_EXT_descriptor_indexing");
-            extensions.add("VK_KHR_spirv_1_4");
-            extensions.add("VK_KHR_shader_float_controls");
-            extensions.add("VK_KHR_ray_query");
+            extensions.add(VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME);
+            extensions.add(VK_KHR_RAY_QUERY_EXTENSION_NAME);
+            extensions.add(VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME);
+            extensions.add(VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME);
+            extensions.add(VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME);
+            extensions.add(VK_KHR_SPIRV_1_4_EXTENSION_NAME);
+            extensions.add(VK_KHR_SHADER_FLOAT_CONTROLS_EXTENSION_NAME);
         }
 
         return new HashSet<>(extensions);
@@ -342,6 +348,7 @@ public class Vulkan {
             allocatorCreateInfo.pVulkanFunctions(vulkanFunctions);
             allocatorCreateInfo.instance(instance);
             allocatorCreateInfo.vulkanApiVersion(VK_API_VERSION_1_2);
+            allocatorCreateInfo.flags(VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT);
 
             PointerBuffer pAllocator = stack.pointers(VK_NULL_HANDLE);
 
