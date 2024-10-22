@@ -11,6 +11,7 @@ import net.vulkanmod.vulkan.shader.SPIRVUtils;
 
 import java.util.function.Function;
 
+import static net.vulkanmod.vulkan.RayTracing.RAY_TRACING;
 import static net.vulkanmod.vulkan.shader.SPIRVUtils.compileShaderAbsoluteFile;
 
 public abstract class PipelineManager {
@@ -38,7 +39,11 @@ public abstract class PipelineManager {
 
     private static void createBasicPipelines() {
         terrainShaderEarlyZ = createPipeline("terrain","terrain", "terrain_Z", TERRAIN_VERTEX_FORMAT);
-        terrainShader = createPipeline("terrain", "terrain", "terrain", TERRAIN_VERTEX_FORMAT);
+        if (RAY_TRACING) {
+            terrainShader = createPipeline("terrain_rt", "terrain_rt", "terrain_rt", TERRAIN_VERTEX_FORMAT);
+        }else {
+            terrainShader = createPipeline("terrain", "terrain", "terrain", TERRAIN_VERTEX_FORMAT);
+        }
         fastBlitPipeline = createPipeline("blit", "blit", "blit", CustomVertexFormat.NONE);
     }
 
