@@ -3,28 +3,20 @@ package net.vulkanmod.vulkan;
 import com.mojang.blaze3d.vertex.MeshData;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import com.mojang.blaze3d.vertex.VertexFormatElement;
-import net.vulkanmod.render.VBO;
 import net.vulkanmod.render.vertex.CustomVertexFormat;
 import net.vulkanmod.vulkan.memory.*;
+import org.joml.Matrix4x3f;
 import org.lwjgl.PointerBuffer;
 import org.lwjgl.system.CustomBuffer;
 import org.lwjgl.system.MemoryStack;
-import org.lwjgl.util.vma.VmaAllocationCreateInfo;
-import org.lwjgl.util.vma.VmaAllocationInfo;
 import org.lwjgl.vulkan.*;
 
 import java.nio.ByteBuffer;
-import java.nio.IntBuffer;
 import java.nio.LongBuffer;
-import java.util.Objects;
-import java.util.function.Consumer;
 
 import static net.vulkanmod.vulkan.Vulkan.*;
 import static org.lwjgl.system.MemoryStack.stackPush;
-import static org.lwjgl.system.MemoryUtil.memAddress;
-import static org.lwjgl.system.MemoryUtil.memCopy;
-import static org.lwjgl.util.vma.Vma.*;
-import static org.lwjgl.util.vma.Vma.vmaDestroyBuffer;
+import static org.lwjgl.system.MemoryUtil.*;
 import static org.lwjgl.vulkan.KHRAccelerationStructure.*;
 import static org.lwjgl.vulkan.KHRBufferDeviceAddress.VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT_KHR;
 import static org.lwjgl.vulkan.KHRBufferDeviceAddress.vkGetBufferDeviceAddressKHR;
@@ -35,6 +27,7 @@ public class RayTracing {
     public static boolean RAY_TRACING = true;
 
     public static AccelerationStructure BLAS = null;
+    public static AccelerationStructure TLAS = null;
 
     public static long getBufferDeviceAddress(Buffer buffer) {
         long address;
@@ -56,6 +49,12 @@ public class RayTracing {
                     .buffer(buffer));
         }
         return address;
+    }
+
+    public static VkDeviceOrHostAddressConstKHR getDeviceAddressConst(MemoryStack stack, long buffer) {
+        return VkDeviceOrHostAddressConstKHR
+                .malloc(stack)
+                .deviceAddress(getBufferDeviceAddress(buffer));
     }
 
     public static VkDeviceOrHostAddressKHR getDeviceAddress(MemoryStack stack, long buffer) {
@@ -101,8 +100,9 @@ public class RayTracing {
 
     public static void setBLAS(MeshData meshData) {
         if (BLAS == null) {
-            BLAS = new AccelerationStructure();
             try (MemoryStack stack = stackPush()) {
+                BLAS = new AccelerationStructure(stack);
+
                 RTGeometry rtGeometry = new RTGeometry(meshData);
 
                 MeshData.DrawState DS = meshData.drawState();
@@ -171,7 +171,6 @@ public class RayTracing {
                 accelerationStructureCreateInfo.buffer(BLAS.buffer.getId());
                 accelerationStructureCreateInfo.size(accelerationStructureBuildSizesInfo.accelerationStructureSize());
                 accelerationStructureCreateInfo.type(VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR);
-                BLAS.handle = stack.mallocLong(1);
                 vkCreateAccelerationStructureKHR(getVkDevice(), accelerationStructureCreateInfo, null, BLAS.handle);
 
                 LongBuffer scratchBuffer = stack.mallocLong(1);
@@ -229,6 +228,147 @@ public class RayTracing {
         }
     }
 
+    public static void setTLAS() {
+        if (TLAS == null && BLAS != null) {
+            try (MemoryStack stack = stackPush()) {
+                TLAS = new AccelerationStructure(stack);
+
+                // Create instance for TLAS
+                long blasDeviceAddress = vkGetAccelerationStructureDeviceAddressKHR(
+                        getVkDevice(),
+                        VkAccelerationStructureDeviceAddressInfoKHR
+                                .calloc(stack)
+                                .sType$Default()
+                                .accelerationStructure(BLAS.handle.get())
+                );
+
+                ByteBuffer instanceData = memByteBuffer(
+                        VkAccelerationStructureInstanceKHR
+                                .calloc(1, stack)
+                                .accelerationStructureReference(blasDeviceAddress)
+                                .mask(~0)
+                                .flags(VK_GEOMETRY_INSTANCE_FORCE_OPAQUE_BIT_KHR |
+                                        VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR)
+                                .transform(VkTransformMatrixKHR
+                                        .calloc(stack)
+                                        .matrix(new Matrix4x3f().getTransposed(stack.mallocFloat(12)))));
+
+                PointerBuffer instancesBuffer = stack.pointers(1L);
+                MemoryManager.getInstance().createBuffer(
+                        1,
+                        VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR |
+                                VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT_KHR,
+                        0,
+                        instanceData.asLongBuffer(),
+                        instancesBuffer
+                );
+
+                // Create the build geometry info
+                VkAccelerationStructureBuildGeometryInfoKHR.Buffer accelerationStructureBuildGeometryInfo =
+                        VkAccelerationStructureBuildGeometryInfoKHR
+                                .calloc(1, stack)
+                                .sType$Default()
+                                .type(VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR)
+                                .flags(VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR)
+                                .geometryCount(1)
+                                .pGeometries(VkAccelerationStructureGeometryKHR
+                                        .calloc(1, stack)
+                                        .sType$Default()
+                                        .geometryType(VK_GEOMETRY_TYPE_INSTANCES_KHR)
+                                        .geometry(
+                                                VkAccelerationStructureGeometryDataKHR
+                                                        .calloc(stack)
+                                                        .instances(
+                                                                VkAccelerationStructureGeometryInstancesDataKHR
+                                                                        .calloc(stack)
+                                                                        .sType$Default()
+                                                                        .data(getDeviceAddressConst(stack, instanceData.asLongBuffer().get()))))
+                                        .flags(VK_GEOMETRY_OPAQUE_BIT_KHR))
+                                .geometryCount(1);
+
+                // Query size
+                VkAccelerationStructureBuildSizesInfoKHR buildSizesInfo =
+                        VkAccelerationStructureBuildSizesInfoKHR
+                                .malloc(stack)
+                                .sType$Default()
+                                .pNext(0);
+                vkGetAccelerationStructureBuildSizesKHR(
+                        getVkDevice(),
+                        VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR,
+                        accelerationStructureBuildGeometryInfo.get(0),
+                        stack.ints(1),
+                        buildSizesInfo);
+
+                // Create buffer and memory
+                MemoryManager.getInstance().createBuffer(
+                        TLAS.buffer,
+                        Math.toIntExact(buildSizesInfo.accelerationStructureSize()),
+                        VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT_KHR,
+                        0
+                );
+
+                // Create TLAS object
+                // Acceleration Structure
+                VkAccelerationStructureCreateInfoKHR accelerationStructureCreateInfo = VkAccelerationStructureCreateInfoKHR.calloc(stack);
+                accelerationStructureCreateInfo.sType$Default();
+                accelerationStructureCreateInfo.sType(VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR);
+                accelerationStructureCreateInfo.buffer(TLAS.buffer.getId());
+                accelerationStructureCreateInfo.size(buildSizesInfo.accelerationStructureSize());
+                accelerationStructureCreateInfo.type(VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR);
+                vkCreateAccelerationStructureKHR(getVkDevice(), accelerationStructureCreateInfo, null, TLAS.handle);
+
+                LongBuffer scratchBuffer = stack.mallocLong(1);
+                PointerBuffer pStagingAllocation = stack.pointers(0L);
+                MemoryManager.getInstance().createBuffer(
+                        buildSizesInfo.buildScratchSize(),
+                        VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT_KHR | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+                        0,
+                        scratchBuffer,
+                        pStagingAllocation
+                );
+
+                // Fill info
+                accelerationStructureBuildGeometryInfo
+                        .scratchData(getDeviceAddress(stack, scratchBuffer.get()))
+                        .dstAccelerationStructure(TLAS.handle.get(0));
+
+                VkCommandBuffer cmdBuffer = beginImmediateCmd();
+                vkCmdPipelineBarrier(
+                        cmdBuffer,
+                        VK_PIPELINE_STAGE_TRANSFER_BIT,
+                        VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR,
+                        0,
+                        VkMemoryBarrier
+                                .calloc(1, stack)
+                                .sType$Default()
+                                .srcAccessMask(VK_ACCESS_TRANSFER_WRITE_BIT)
+                                .dstAccessMask(
+                                        VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR |
+                                                VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR |
+                                                VK_ACCESS_SHADER_READ_BIT),
+                        null, null
+                );
+
+                vkCmdBuildAccelerationStructuresKHR(
+                        cmdBuffer,
+                        accelerationStructureBuildGeometryInfo,
+                        pointersOfElements(
+                                stack,
+                                VkAccelerationStructureBuildRangeInfoKHR
+                                        .calloc(1, stack)
+                                        .primitiveCount(1)
+                        )
+                );
+
+                endImmediateCmd();
+
+                scratchBuffer.clear();
+
+                return;
+            }
+        }
+    }
+
     public static int getVertexFormat(MeshData.DrawState drawState) {
         int vertexFormat = -1;
 
@@ -266,8 +406,8 @@ class AccelerationStructure {
     public long deviceAddress;
     public Buffer buffer;
 
-    AccelerationStructure() {
-        this.handle = null;
+    AccelerationStructure(MemoryStack stack) {
+        this.handle = stack.mallocLong(1);
         this.deviceAddress = 0;
         this.buffer = new IndexBuffer(1, MemoryTypes.GPU_MEM, true);
     }

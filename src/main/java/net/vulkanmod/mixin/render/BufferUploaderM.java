@@ -59,6 +59,7 @@ public class BufferUploaderM {
             renderer.uploadAndBindUBOs(pipeline);
 
             RayTracing.setBLAS(meshData);
+            RayTracing.setTLAS();
 
             Renderer.getDrawer().draw(meshData.vertexBuffer(), parameters.mode(), parameters.format(), parameters.vertexCount());
         }
