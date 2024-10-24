@@ -5,7 +5,7 @@
 #include "light.glsl"
 #include "fog.glsl"
 
-layout (binding = 3, set = 0) uniform accelerationStructureEXT AS;
+layout (binding = 6, set = 0) uniform accelerationStructureEXT AS;
 
 layout (binding = 2) uniform sampler2D Sampler0;
 

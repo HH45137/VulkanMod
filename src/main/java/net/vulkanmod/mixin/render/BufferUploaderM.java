@@ -15,6 +15,8 @@ import net.vulkanmod.vulkan.texture.VTextureSelector;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Overwrite;
 
+import static net.vulkanmod.vulkan.RayTracing.RAY_TRACING;
+
 @Mixin(BufferUploader.class)
 public class BufferUploaderM {
 
@@ -58,8 +60,11 @@ public class BufferUploaderM {
             VTextureSelector.bindShaderTextures(pipeline);
             renderer.uploadAndBindUBOs(pipeline);
 
-            RayTracing.setBLAS(meshData);
-            RayTracing.setTLAS();
+            if (RAY_TRACING && !RayTracing.BLAS.isCreated && !RayTracing.TLAS.isCreated) {
+                RayTracing.setBLAS(meshData);
+                RayTracing.setTLAS();
+                RayTracing.mappedBufferTLAS = RayTracing.TLAS.AS;
+            }
 
             Renderer.getDrawer().draw(meshData.vertexBuffer(), parameters.mode(), parameters.format(), parameters.vertexCount());
         }

@@ -5,6 +5,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import net.minecraft.util.GsonHelper;
+import net.vulkanmod.vulkan.RayTracing;
 import net.vulkanmod.vulkan.Renderer;
 import net.vulkanmod.vulkan.Vulkan;
 import net.vulkanmod.vulkan.device.DeviceManager;
@@ -18,6 +19,7 @@ import net.vulkanmod.vulkan.shader.descriptor.ManualUBO;
 import net.vulkanmod.vulkan.shader.descriptor.UBO;
 import net.vulkanmod.vulkan.shader.layout.AlignedStruct;
 import net.vulkanmod.vulkan.shader.layout.PushConstants;
+import net.vulkanmod.vulkan.shader.layout.Uniform;
 import net.vulkanmod.vulkan.texture.VTextureSelector;
 import net.vulkanmod.vulkan.texture.VulkanImage;
 import org.apache.commons.lang3.Validate;
@@ -36,9 +38,12 @@ import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 
+import static net.vulkanmod.vulkan.RayTracing.RAY_TRACING;
+import static net.vulkanmod.vulkan.RayTracing.TLAS;
 import static net.vulkanmod.vulkan.shader.SPIRVUtils.compileShader;
 import static net.vulkanmod.vulkan.shader.SPIRVUtils.compileShaderAbsoluteFile;
 import static org.lwjgl.system.MemoryStack.stackPush;
+import static org.lwjgl.vulkan.KHRAccelerationStructure.VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
 import static org.lwjgl.vulkan.VK10.*;
 
 public abstract class Pipeline {
@@ -367,6 +372,25 @@ public abstract class Pipeline {
                 uboDescriptorWrite.descriptorCount(1);
                 uboDescriptorWrite.pBufferInfo(bufferInfos[i]);
                 uboDescriptorWrite.dstSet(currentSet);
+
+                for (var ubo2 : ubo.getUniforms()) {
+                    String name = ubo2.getName();
+                    if (name.equals("AS")) {
+                        var temp = ubo.getBinding();
+                        uboDescriptorWrite = VkWriteDescriptorSet.calloc(stack)
+                                .sType$Default()
+                                .descriptorType(VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR)
+                                .dstBinding(ubo.getBinding())
+                                .dstSet(currentSet)
+                                .descriptorCount(1)
+                                .pNext(
+                                        VkWriteDescriptorSetAccelerationStructureKHR
+                                                .calloc(stack)
+                                                .sType$Default()
+                                                .pAccelerationStructures(stack.longs(TLAS.AS))
+                                );
+                    }
+                }
 
                 ++i;
             }

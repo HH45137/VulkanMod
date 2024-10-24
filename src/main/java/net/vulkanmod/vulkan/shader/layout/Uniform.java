@@ -48,6 +48,7 @@ public class Uniform {
     public static Uniform createField(Info info) {
         return switch (info.type) {
             case "mat4", "vec3", "vec4", "vec2" -> new Uniform(info);
+            case "accelerationStructureEXT" -> new Vec1l(info);
             case "mat3" -> new Mat3(info);
             case "float" -> new Vec1f(info);
             case "int" -> new Vec1i(info);
@@ -69,6 +70,7 @@ public class Uniform {
     public static Info createUniformInfo(String type, String name, int count) {
         return switch (type) {
             case "matrix4x4" -> new Info("mat4", name, 4, 16);
+            case "accelerationStructureEXT" -> new Info("accelerationStructureEXT", name, 8, 8);
             case "float" -> switch (count) {
                 case 4 -> new Info("vec4", name, 4, 4);
                 case 3 -> new Info("vec3", name, 4, 3);
@@ -84,6 +86,7 @@ public class Uniform {
 
     public static Info createUniformInfo(String type, String name) {
         return switch (type) {
+            case "accelerationStructureEXT" -> new Info(type, name, 8, 8);
             case "mat4" -> new Info(type, name, 4, 16);
             case "mat3" -> new Info(type, name, 4, 9);
 

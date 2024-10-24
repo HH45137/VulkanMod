@@ -5,6 +5,8 @@ import com.mojang.blaze3d.vertex.VertexFormatElement;
 import it.unimi.dsi.fastutil.objects.Object2LongMap;
 import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
 import net.vulkanmod.interfaces.VertexFormatMixed;
+import net.vulkanmod.vulkan.AccelerationStructure;
+import net.vulkanmod.vulkan.RayTracing;
 import net.vulkanmod.vulkan.Renderer;
 import net.vulkanmod.vulkan.Vulkan;
 import net.vulkanmod.vulkan.device.DeviceManager;
@@ -16,6 +18,7 @@ import java.nio.ByteBuffer;
 import java.nio.LongBuffer;
 import java.util.List;
 
+import static net.vulkanmod.vulkan.RayTracing.RAY_TRACING;
 import static org.lwjgl.system.MemoryStack.stackGet;
 import static org.lwjgl.system.MemoryStack.stackPush;
 import static org.lwjgl.vulkan.VK10.*;
@@ -38,6 +41,11 @@ public class GraphicsPipeline extends Pipeline {
         this.vertexFormat = builder.vertexFormat;
 
         this.vertexInputDescription = new VertexInputDescription(this.vertexFormat);
+
+        if (RAY_TRACING && RayTracing.BLAS == null || RayTracing.TLAS == null) {
+            RayTracing.BLAS = new AccelerationStructure();
+            RayTracing.TLAS = new AccelerationStructure();
+        }
 
         createDescriptorSetLayout();
         createPipelineLayout();
