@@ -98,6 +98,14 @@ public abstract class Pipeline {
         try (MemoryStack stack = stackPush()) {
             int bindingsSize = this.buffers.size() + imageDescriptors.size();
 
+            if (this.name != null && RAY_TRACING) {
+                if (this.name.equals("basic/terrain_rt/terrain_rt")) {
+                    bindingsSize += 1;
+                }
+            }
+
+            int currentStages = 0;
+
             VkDescriptorSetLayoutBinding.Buffer bindings = VkDescriptorSetLayoutBinding.calloc(bindingsSize, stack);
 
             for (UBO ubo : this.buffers) {
@@ -107,6 +115,7 @@ public abstract class Pipeline {
                 uboLayoutBinding.descriptorType(ubo.getType());
                 uboLayoutBinding.pImmutableSamplers(null);
                 uboLayoutBinding.stageFlags(ubo.getStages());
+                currentStages = ubo.getStages();
             }
 
             for (ImageDescriptor imageDescriptor : this.imageDescriptors) {
@@ -116,6 +125,23 @@ public abstract class Pipeline {
                 samplerLayoutBinding.descriptorType(imageDescriptor.getType());
                 samplerLayoutBinding.pImmutableSamplers(null);
                 samplerLayoutBinding.stageFlags(imageDescriptor.getStages());
+            }
+
+            if (this.name != null && RAY_TRACING) {
+                if (this.name.equals("basic/terrain_rt/terrain_rt")) {
+//                    VkDescriptorSetLayoutBinding ASsLayoutBinding = bindings.get(bindingsSize - 1);
+//                    ASsLayoutBinding.binding(5);
+//                    ASsLayoutBinding.descriptorCount(1);
+//                    ASsLayoutBinding.descriptorType(VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR);
+//                    ASsLayoutBinding.pImmutableSamplers(null);
+//                    ASsLayoutBinding.stageFlags(VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT);
+
+                    bindings.apply(bindingsSize - 1, dslb -> dslb
+                            .binding(5)
+                            .descriptorType(VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR)
+                            .descriptorCount(1)
+                            .stageFlags(VK_SHADER_STAGE_FRAGMENT_BIT));
+                }
             }
 
             VkDescriptorSetLayoutCreateInfo layoutInfo = VkDescriptorSetLayoutCreateInfo.calloc(stack);
@@ -338,6 +364,14 @@ public abstract class Pipeline {
 
         private void updateDescriptorSet(MemoryStack stack, UniformBuffer uniformBuffer) {
 
+            int size = pipeline.buffers.size() + pipeline.imageDescriptors.size();
+
+            if (this.pipeline.name != null && RAY_TRACING) {
+                if (this.pipeline.name.equals("basic/terrain_rt/terrain_rt")) {
+                    size += 1;
+                }
+            }
+
             //Check if update is needed
             if (!needsUpdate(uniformBuffer))
                 return;
@@ -349,7 +383,7 @@ public abstract class Pipeline {
 
             this.currentSet = this.sets.get(this.currentIdx);
 
-            VkWriteDescriptorSet.Buffer descriptorWrites = VkWriteDescriptorSet.calloc(pipeline.buffers.size() + pipeline.imageDescriptors.size(), stack);
+            VkWriteDescriptorSet.Buffer descriptorWrites = VkWriteDescriptorSet.calloc(size, stack);
             VkDescriptorBufferInfo.Buffer[] bufferInfos = new VkDescriptorBufferInfo.Buffer[pipeline.buffers.size()];
 
             //TODO maybe ubo update is not needed everytime
@@ -372,25 +406,6 @@ public abstract class Pipeline {
                 uboDescriptorWrite.descriptorCount(1);
                 uboDescriptorWrite.pBufferInfo(bufferInfos[i]);
                 uboDescriptorWrite.dstSet(currentSet);
-
-                for (var ubo2 : ubo.getUniforms()) {
-                    String name = ubo2.getName();
-                    if (name.equals("AS")) {
-                        var temp = ubo.getBinding();
-                        uboDescriptorWrite = VkWriteDescriptorSet.calloc(stack)
-                                .sType$Default()
-                                .descriptorType(VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR)
-                                .dstBinding(ubo.getBinding())
-                                .dstSet(currentSet)
-                                .descriptorCount(1)
-                                .pNext(
-                                        VkWriteDescriptorSetAccelerationStructureKHR
-                                                .calloc(stack)
-                                                .sType$Default()
-                                                .pAccelerationStructures(stack.longs(TLAS.AS))
-                                );
-                    }
-                }
 
                 ++i;
             }
@@ -427,6 +442,22 @@ public abstract class Pipeline {
                 ++i;
             }
 
+            if (this.pipeline.name != null && RAY_TRACING) {
+                if (this.pipeline.name.equals("basic/terrain_rt/terrain_rt")) {
+                    VkWriteDescriptorSet ASsDescriptorWrite = descriptorWrites.get(size - 1);
+                    ASsDescriptorWrite
+                            .sType$Default()
+                            .descriptorType(VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR)
+                            .dstBinding(5)
+                            .dstSet(currentSet)
+                            .descriptorCount(1)
+                            .pNext(VkWriteDescriptorSetAccelerationStructureKHR
+                                    .calloc(stack)
+                                    .sType$Default()
+                                    .pAccelerationStructures(stack.longs(TLAS.AS)));
+                }
+            }
+
             vkUpdateDescriptorSets(DEVICE, descriptorWrites, null);
         }
 
@@ -454,7 +485,25 @@ public abstract class Pipeline {
         private void createDescriptorPool(MemoryStack stack) {
             int size = pipeline.buffers.size() + pipeline.imageDescriptors.size();
 
+            if (this.pipeline.name != null && RAY_TRACING) {
+                if (this.pipeline.name.equals("basic/terrain_rt/terrain_rt")) {
+                    size += 1;
+                }
+            }
+
             VkDescriptorPoolSize.Buffer poolSizes = VkDescriptorPoolSize.calloc(size, stack);
+
+            if (this.pipeline.name != null && RAY_TRACING) {
+                if (this.pipeline.name.equals("basic/terrain_rt/terrain_rt")) {
+//                    VkDescriptorPoolSize ASsBufferPoolSize = poolSizes.get(size - 1);
+//                    ASsBufferPoolSize.type(VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR);
+//                    ASsBufferPoolSize.descriptorCount(1);
+
+                    poolSizes.apply(size - 1, dps -> dps
+                            .type(VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR)
+                            .descriptorCount(1));
+                }
+            }
 
             int i;
             for (i = 0; i < pipeline.buffers.size(); ++i) {

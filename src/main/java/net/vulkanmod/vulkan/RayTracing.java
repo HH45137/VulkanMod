@@ -31,12 +31,6 @@ public class RayTracing {
     public static AccelerationStructure BLAS;
     public static AccelerationStructure TLAS;
 
-    public static long mappedBufferTLAS = 0;
-
-    public static long getBufferTLAS() {
-        return mappedBufferTLAS;
-    }
-
     public static long getBufferDeviceAddress(Buffer buffer) {
         long address;
         try (MemoryStack stack = stackPush()) {

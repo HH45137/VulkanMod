@@ -63,7 +63,6 @@ public class BufferUploaderM {
             if (RAY_TRACING && !RayTracing.BLAS.isCreated && !RayTracing.TLAS.isCreated) {
                 RayTracing.setBLAS(meshData);
                 RayTracing.setTLAS();
-                RayTracing.mappedBufferTLAS = RayTracing.TLAS.AS;
             }
 
             Renderer.getDrawer().draw(meshData.vertexBuffer(), parameters.mode(), parameters.format(), parameters.vertexCount());

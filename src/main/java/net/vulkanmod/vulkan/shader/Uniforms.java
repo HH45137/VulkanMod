@@ -19,11 +19,7 @@ public class Uniforms {
 
     public static Object2ReferenceOpenHashMap<String, Supplier<MappedBuffer>> mat4f_uniformMap = new Object2ReferenceOpenHashMap<>();
 
-    public static Object2ReferenceOpenHashMap<String, Supplier<Long>> ac_uniformMap = new Object2ReferenceOpenHashMap<>();
-
     public static void setupDefaultUniforms() {
-
-        ac_uniformMap.put("AC", RayTracing::getBufferTLAS);
 
         //Mat4
         mat4f_uniformMap.put("ModelViewMat", VRenderSystem::getModelViewMatrix);
