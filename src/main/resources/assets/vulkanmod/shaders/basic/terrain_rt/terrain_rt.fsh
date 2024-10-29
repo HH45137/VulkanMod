@@ -1,6 +1,7 @@
 #version 460
 
 #extension GL_EXT_ray_query: enable
+#extension GL_EXT_ray_flags_primitive_culling: enable
 
 #include "light.glsl"
 #include "fog.glsl"
@@ -14,13 +15,10 @@ layout (binding = 1) uniform UBO {
     float FogStart;
     float FogEnd;
     float AlphaCutout;
-};
-
-layout (binding = 0) uniform UniformBufferObject {
-    mat4 MVP;
-    mat4 ModelViewMat;
-    mat4 ProjMat;
+    vec3 cameraPos;
     vec2 ScreenSize;
+    mat4 ModelViewMat;
+    vec3 Light1_Direction;
 };
 
 layout (location = 0) in float vertexDistance;
@@ -37,46 +35,46 @@ void main() {
     }
 
     vec2 pixel = vec2(gl_FragCoord.xy);
-    vec2 size = normalize(vec2(ScreenSize.x, ScreenSize.y));
+    vec2 size = vec2(ScreenSize.x, ScreenSize.y);
     if (any(greaterThanEqual(pixel, size)))
     {
-        return;
+        discard;
     }
     vec2 px = vec2(pixel) + vec2(0.5);
     vec2 p = px / vec2(size);
-    vec3 origin = vec3(
-    ModelViewMat[0][3],
-    ModelViewMat[1][3],
-    ModelViewMat[2][3]
-    );
+
+    vec3 origin = cameraPos;
     vec3 corners[4] = {
-    (origin + vec3(0, 0, 1)) + vec3(origin.x / 2, origin.y / 2, 0),
-    (origin + vec3(0, 0, 1)) + vec3(-origin.x / 2, origin.y / 2, 0),
-    (origin + vec3(0, 0, 1)) + vec3(origin.x / 2, -origin.y / 2, 0),
-    (origin + vec3(0, 0, 1)) + vec3(-origin.x / 2, -origin.y / 2, 0)
+    vec3(origin.x / 2, origin.y / 2, 1.0),
+    vec3(-origin.x / 2, origin.y / 2, 1.0),
+    vec3(origin.x / 2, -origin.y / 2, 1.0),
+    vec3(-origin.x / 2, -origin.y / 2, 1.0)
     };
     vec3 target = mix(mix(corners[0], corners[2], p.y), mix(corners[1], corners[3], p.y), p.x);
-    vec4 direction = vec4(target - origin, 0.0);
+    vec4 direction = ModelViewMat * vec4(normalize(target.xyz), 0.0);
 
     rayQueryEXT rayQuery;
     rayQueryInitializeEXT(
         rayQuery,
         AS,
-        gl_RayFlagsOpaqueEXT,
+        gl_RayFlagsTerminateOnFirstHitEXT | gl_RayFlagsCullNoOpaqueEXT | gl_RayFlagsSkipAABBEXT,
         0xFF,
         origin,
         0.1,
         direction.xyz,
-        100.0
+        500.0
     );
     while (rayQueryProceedEXT(rayQuery)) {}
     float t = rayQueryGetIntersectionTEXT(rayQuery, true);
-    if (t < 100.0) {
-        fragColor = color;
+
+    if (t > 0.0) {
+        fragColor = linear_fog(color, vertexDistance, FogStart, FogEnd, FogColor);
     } else
     {
-        fragColor = normalize(color * vec4(t));
+        fragColor = linear_fog(color * vec4(0.1, 0.1, 0.1, 1.0), vertexDistance, FogStart, FogEnd, FogColor);
     }
+
+//        fragColor = normalize(vec4(t, t, t, 1.0));
 
     //    fragColor = linear_fog(color, vertexDistance, FogStart, FogEnd, FogColor);
 }

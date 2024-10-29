@@ -48,6 +48,8 @@ import org.lwjgl.opengl.GL11;
 
 import java.util.*;
 
+import static net.vulkanmod.vulkan.VRenderSystem.setCameraPos;
+
 public class WorldRenderer {
     private static WorldRenderer INSTANCE;
 
@@ -355,6 +357,12 @@ public class WorldRenderer {
             VRenderSystem.setChunkOffset(0, 0, 0);
             renderer.pushConstants(pipeline);
         }
+
+        setCameraPos(
+                (float) cameraPos.x,
+                (float) cameraPos.y,
+                (float) cameraPos.z
+        );
 
         this.minecraft.getProfiler().pop();
         renderType.clearRenderState();

@@ -49,6 +49,7 @@ public abstract class VRenderSystem {
     public static MappedBuffer ChunkOffset = new MappedBuffer(3 * 4);
     public static MappedBuffer lightDirection0 = new MappedBuffer(3 * 4);
     public static MappedBuffer lightDirection1 = new MappedBuffer(3 * 4);
+    public static MappedBuffer cameraPos = new MappedBuffer(3 * 4);
 
     public static MappedBuffer shaderColor = new MappedBuffer(4 * 4);
     public static MappedBuffer shaderFogColor = new MappedBuffer(4 * 4);
@@ -131,6 +132,13 @@ public abstract class VRenderSystem {
 
     public static void setChunkOffset(float f1, float f2, float f3) {
         long ptr = ChunkOffset.ptr;
+        VUtil.UNSAFE.putFloat(ptr, f1);
+        VUtil.UNSAFE.putFloat(ptr + 4, f2);
+        VUtil.UNSAFE.putFloat(ptr + 8, f3);
+    }
+
+    public static void setCameraPos(float f1, float f2, float f3) {
+        long ptr = cameraPos.ptr;
         VUtil.UNSAFE.putFloat(ptr, f1);
         VUtil.UNSAFE.putFloat(ptr + 4, f2);
         VUtil.UNSAFE.putFloat(ptr + 8, f3);
