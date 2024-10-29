@@ -11,7 +11,7 @@ import net.vulkanmod.vulkan.shader.SPIRVUtils;
 
 import java.util.function.Function;
 
-import static net.vulkanmod.vulkan.RayTracing.RAY_TRACING;
+import static net.vulkanmod.vulkan.hwrt.RayTracing.RAY_TRACING;
 import static net.vulkanmod.vulkan.shader.SPIRVUtils.compileShaderAbsoluteFile;
 
 public abstract class PipelineManager {

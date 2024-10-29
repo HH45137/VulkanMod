@@ -22,7 +22,7 @@ import java.nio.LongBuffer;
 import java.util.*;
 
 import static java.util.stream.Collectors.toSet;
-import static net.vulkanmod.vulkan.RayTracing.RAY_TRACING;
+import static net.vulkanmod.vulkan.hwrt.RayTracing.RAY_TRACING;
 import static net.vulkanmod.vulkan.queue.Queue.getQueueFamilies;
 import static net.vulkanmod.vulkan.util.VUtil.asPointerBuffer;
 import static org.lwjgl.glfw.GLFWVulkan.glfwCreateWindowSurface;

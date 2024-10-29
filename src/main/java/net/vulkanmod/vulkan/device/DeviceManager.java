@@ -14,7 +14,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static java.util.stream.Collectors.toSet;
-import static net.vulkanmod.vulkan.RayTracing.RAY_TRACING;
+import static net.vulkanmod.vulkan.hwrt.RayTracing.RAY_TRACING;
 import static net.vulkanmod.vulkan.queue.Queue.findQueueFamilies;
 import static net.vulkanmod.vulkan.util.VUtil.asPointerBuffer;
 import static org.lwjgl.glfw.GLFWVulkan.glfwGetRequiredInstanceExtensions;
@@ -24,7 +24,6 @@ import static org.lwjgl.vulkan.EXTDebugUtils.VK_EXT_DEBUG_UTILS_EXTENSION_NAME;
 import static org.lwjgl.vulkan.KHRSurface.*;
 import static org.lwjgl.vulkan.VK10.*;
 import static org.lwjgl.vulkan.VK12.*;
-import static org.lwjgl.vulkan.VK13.*;
 
 public abstract class DeviceManager {
     public static List<Device> availableDevices;

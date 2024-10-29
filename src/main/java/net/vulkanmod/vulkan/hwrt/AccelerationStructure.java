@@ -1,10 +1,8 @@
-package net.vulkanmod.vulkan;
+package net.vulkanmod.vulkan.hwrt;
 
 import net.vulkanmod.vulkan.memory.Buffer;
 import net.vulkanmod.vulkan.memory.IndexBuffer;
 import net.vulkanmod.vulkan.memory.MemoryTypes;
-
-import java.nio.LongBuffer;
 
 public class AccelerationStructure {
     public long AS;
