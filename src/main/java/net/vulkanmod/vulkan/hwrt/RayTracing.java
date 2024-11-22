@@ -26,19 +26,10 @@ public class RayTracing {
 
     public static boolean RAY_TRACING = true;
 
+    public static int minAccelerationStructureScratchOffsetAlignment = 0;
+
     public static AccelerationStructure BLAS;
     public static AccelerationStructure TLAS;
-
-    public static long getBufferDeviceAddress(Buffer buffer) {
-        long address;
-        try (MemoryStack stack = stackPush()) {
-            address = vkGetBufferDeviceAddressKHR(getVkDevice(), VkBufferDeviceAddressInfo
-                    .calloc(stack)
-                    .sType$Default()
-                    .buffer(buffer.getId()));
-        }
-        return address;
-    }
 
     public static long getBufferDeviceAddress(long buffer) {
         long address;
@@ -48,6 +39,9 @@ public class RayTracing {
                     .sType$Default()
                     .buffer(buffer));
         }
+        // check alignment
+        if ((address % minAccelerationStructureScratchOffsetAlignment) != 0)
+            throw new AssertionError("Illegal address alignment");
         return address;
     }
 
@@ -107,8 +101,8 @@ public class RayTracing {
 
                 MeshData.DrawState DS = meshData.drawState();
 
-                int numTriangles = DS.indexCount() / 3;
-                int numVertices = DS.indexCount();
+                int numTriangles = DS.vertexCount() / 3;
+                int numVertices = DS.vertexCount();
                 int vertexStride = CustomVertexFormat.COMPRESSED_TERRAIN.getVertexSize();
                 int vertexFormat = getVertexFormat(DS);
                 int indexType = VK_INDEX_TYPE_UINT16;
@@ -142,7 +136,7 @@ public class RayTracing {
                                                         .vertexFormat(vertexFormat)
                                                         .vertexData(vertexBufferDeviceAddress)
                                                         .vertexStride(vertexStride)
-                                                        .maxVertex(numVertices)
+                                                        .maxVertex(numVertices * vertexStride)
                                                         .indexType(indexType)
                                                         .indexData(indexBufferDeviceAddress)))
                                         .flags(VK_GEOMETRY_OPAQUE_BIT_KHR));
@@ -159,10 +153,11 @@ public class RayTracing {
                         accelerationStructureBuildSizesInfo
                 );
 
+                long bufferSize = accelerationStructureBuildSizesInfo.accelerationStructureSize();
                 // Create buffer and memory
                 MemoryManager.getInstance().createBuffer(
                         BLAS.buffer,
-                        Math.toIntExact(accelerationStructureBuildSizesInfo.accelerationStructureSize()),
+                        Math.toIntExact(bufferSize),
                         VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT_KHR,
                         0
                 );
@@ -172,7 +167,7 @@ public class RayTracing {
                 accelerationStructureCreateInfo.sType$Default();
                 accelerationStructureCreateInfo.sType(VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR);
                 accelerationStructureCreateInfo.buffer(BLAS.buffer.getId());
-                accelerationStructureCreateInfo.size(accelerationStructureBuildSizesInfo.accelerationStructureSize());
+                accelerationStructureCreateInfo.size(bufferSize);
                 accelerationStructureCreateInfo.type(VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR);
                 LongBuffer pAccelerationStructure = stack.mallocLong(1);
                 vkCreateAccelerationStructureKHR(getVkDevice(), accelerationStructureCreateInfo, null, pAccelerationStructure);

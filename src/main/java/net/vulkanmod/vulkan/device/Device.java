@@ -1,5 +1,6 @@
 package net.vulkanmod.vulkan.device;
 
+import net.vulkanmod.vulkan.hwrt.RayTracing;
 import org.lwjgl.PointerBuffer;
 import org.lwjgl.system.MemoryStack;
 import org.lwjgl.vulkan.*;
@@ -11,12 +12,12 @@ import java.util.HashSet;
 import java.util.Set;
 
 import static java.util.stream.Collectors.toSet;
+import static net.vulkanmod.vulkan.hwrt.RayTracing.RAY_TRACING;
 import static org.lwjgl.glfw.GLFW.GLFW_PLATFORM_WIN32;
 import static org.lwjgl.glfw.GLFW.glfwGetPlatform;
 import static org.lwjgl.system.MemoryStack.stackPush;
 import static org.lwjgl.vulkan.VK10.*;
-import static org.lwjgl.vulkan.VK11.vkEnumerateInstanceVersion;
-import static org.lwjgl.vulkan.VK11.vkGetPhysicalDeviceFeatures2;
+import static org.lwjgl.vulkan.VK11.*;
 
 public class Device {
     final VkPhysicalDevice physicalDevice;
@@ -41,6 +42,21 @@ public class Device {
 
         properties = VkPhysicalDeviceProperties.malloc();
         vkGetPhysicalDeviceProperties(physicalDevice, properties);
+
+        if (RAY_TRACING) {
+            try (MemoryStack stack = MemoryStack.stackPush()) {
+                VkPhysicalDeviceAccelerationStructurePropertiesKHR accelerationStructureProperties = VkPhysicalDeviceAccelerationStructurePropertiesKHR
+                        .malloc(stack)
+                        .sType$Default();
+                vkGetPhysicalDeviceProperties2(physicalDevice, VkPhysicalDeviceProperties2
+                        .calloc(stack)
+                        .sType$Default()
+                        .pNext(accelerationStructureProperties)
+                );
+                RayTracing.minAccelerationStructureScratchOffsetAlignment = accelerationStructureProperties.minAccelerationStructureScratchOffsetAlignment();
+                System.out.println("minAccelerationStructureScratchOffsetAlignment = " + RayTracing.minAccelerationStructureScratchOffsetAlignment);
+            }
+        }
 
         this.vendorId = properties.vendorID();
         this.vendorIdString = decodeVendor(properties.vendorID());

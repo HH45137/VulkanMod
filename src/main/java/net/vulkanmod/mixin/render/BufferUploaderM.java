@@ -60,10 +60,13 @@ public class BufferUploaderM {
             VTextureSelector.bindShaderTextures(pipeline);
             renderer.uploadAndBindUBOs(pipeline);
 
-            if (RAY_TRACING && !RayTracing.BLAS.isCreated && !RayTracing.TLAS.isCreated) {
-                RayTracing.setBLAS(meshData);
-                RayTracing.setTLAS();
-            }
+//            System.out.println(meshData.drawState().vertexCount());
+//            if (meshData.drawState().vertexCount() > 200) {
+//                if (RAY_TRACING && !RayTracing.BLAS.isCreated && !RayTracing.TLAS.isCreated) {
+//                    RayTracing.setBLAS(meshData);
+//                    RayTracing.setTLAS();
+//                }
+//            }
 
             Renderer.getDrawer().draw(meshData.vertexBuffer(), parameters.mode(), parameters.format(), parameters.vertexCount());
         }
