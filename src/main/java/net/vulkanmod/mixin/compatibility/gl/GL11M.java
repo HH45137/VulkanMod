@@ -188,6 +188,15 @@ public class GL11M {
      * @reason
      */
     @Overwrite(remap = false)
+    public static int glGetTexParameteri(@NativeType("GLenum") int target, @NativeType("GLenum") int pname) {
+        return GlTexture.getTexParameteri(target, pname);
+    }
+
+    /**
+     * @author
+     * @reason
+     */
+    @Overwrite(remap = false)
     public static int glGetTexLevelParameteri(@NativeType("GLenum") int target, @NativeType("GLint") int level, @NativeType("GLenum") int pname) {
         return GlTexture.getTexLevelParameter(target, level, pname);
     }
@@ -295,5 +304,16 @@ public class GL11M {
     @Overwrite(remap = false)
     public static void glBlendFunc(@NativeType("GLenum") int sfactor, @NativeType("GLenum") int dfactor) {
         // TODO
+    }
+
+
+
+    /**
+     * @author
+     * @reason
+     */
+    @Overwrite(remap = false)
+    public static void glPolygonOffset(@NativeType("GLfloat") float factor, @NativeType("GLfloat") float units) {
+        VRenderSystem.polygonOffset(factor, units);
     }
 }
